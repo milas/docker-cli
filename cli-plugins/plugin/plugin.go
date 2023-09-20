@@ -83,7 +83,9 @@ func RunPlugin(dockerCli *command.DockerCli, plugin *cobra.Command, meta manager
 			cmd.SetContext(ctx)
 			closeOnCLISocketClose(cancel)
 
-			var opts []command.CLIOption
+			opts := []command.CLIOption{
+				command.WithUserAgent(pluginUserAgent(plugin.Name(), meta.Version)),
+			}
 			if os.Getenv("DOCKER_CLI_PLUGIN_USE_DIAL_STDIO") != "" {
 				opts = append(opts, withPluginClientConn(plugin.Name()))
 			}
@@ -225,4 +227,19 @@ func RunningStandalone() bool {
 		return false
 	}
 	return len(os.Args) < 2 || os.Args[1] != manager.MetadataSubcommandName
+}
+
+func pluginUserAgent(pluginName string, version string) string {
+	if pluginName == "" {
+		pluginName = "unknown"
+	}
+
+	// because the plugin name comes from the `docker` subcommand, add a
+	// distinguishing prefix, e.g. `docker compose` -> `docker-cli-plugin-compose`
+	pluginName = "docker-cli-plugin-" + pluginName
+
+	if version == "" {
+		version = "unknown"
+	}
+	return pluginName + "/" + version
 }
